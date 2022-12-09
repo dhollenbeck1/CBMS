@@ -14,7 +14,7 @@ p.capacity = 25; % AH
 p.f1 = 0.9; % cycle number correction factor
 p.f2 = 0.9; % temperature correction factor
 p.C_capacity = 3600*p.capacity*p.f1*p.f2;
-p.R_selfDischarge = 1e12;
+p.R_selfDischarge = 1e9;
 
 % -- Voltage-Current Characteristics 
 fn.V_oc     = @(SOC,p)  p(1)*exp(p(2)*SOC) + p(3)*SOC.^3 + p(4)*SOC.^2 + p(5)*SOC + p(6);
@@ -25,7 +25,7 @@ fn.R_L      = @(SOC,p)  p(1)*exp(p(2)*SOC) + p(3);
 fn.C_L      = @(SOC,p)  p(1)*exp(p(2)*SOC) + p(3);
 
 % -- Voltage-Current Characteristics
-p.V_oc         = [-1.031,-35,0.3201,-0.1178,0.2156,3.685];
+p.V_oc         = 12*[-1.031,-35,0.3201,-0.1178,0.2156,3.685];
 p.R_series     = [0.1562,-24.37,0.07446];
 p.R_S          = [0.3208,-29.14,0.04669];
 p.C_S          = [-752.9,-13.51,703.6];
