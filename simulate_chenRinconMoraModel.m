@@ -3,10 +3,10 @@ clear
 
 % -- NOTES
 % state of charge varies between 0 < V_SOC < 1
-T = 2000;
+T = 1000;
 dt = 1e-3;
 n = round(T/dt);
-t = linspace(0,T,n)';
+% t = linspace(0,T,n)';
 R_load = 0.4; %[t,0.4*ones(n,1)];
 
 % -- Battery Lifetime
