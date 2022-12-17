@@ -2,7 +2,7 @@ clc
 clear
 
 fn = 'data_test1';
-x = importdata('test1.txt',',');
+x = importdata('constantJump_batter_2.txt',',');
 t = datevec(x(:,1));
 x = x(:,3:4);
 t = 3600*t(:,4) + 60*t(:,5) + t(:,6);
