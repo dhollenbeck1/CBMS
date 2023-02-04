@@ -29,9 +29,11 @@ data.tc = C;
 data.ic = data.x(IA,2);
 data.vc = data.x(IA,1);
 data.rc = data.vc./data.ic;
-data.rc(isinf(data.rc)) = 1e3;
-data.rc(isnan(data.rc)) = 1e3;
+data.rc(isinf(data.rc)) = 1e2;
+data.rc(isnan(data.rc)) = 1e2;
 
 save([fn,'.mat'],'data')
 
 writematrix([t,x],[fn,'.csv'])
+
+cutData

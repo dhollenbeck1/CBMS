@@ -4,21 +4,25 @@ clear
 % -- Import Data
 fn = 'data/data_test1.mat';
 fn2 = 'data_cut/cdata_test1.mat';
-T = 1000;
-dt = 1e-0;
-n = round(T/dt);
-t = linspace(0,T,n)';
 
 switch 2
     case 1
+        T = 1000;
+        dt = 1e-0;
+        n = round(T/dt);
+        t = linspace(0,T,n)';
         load(fn)
         data.ic_interp = interp1(data.tc,data.ic,t);
         data.vc_interp = interp1(data.tc,data.vc,t);
         data.rc_interp = interp1(data.tc,data.rc,t);
     case 2
-        load(fn2)
-        c_ind = 2;
+        load(fn2); 
+        c_ind = 1;        
+        dt = 1e-0;      
         data.tc = cdata(c_ind).t - cdata(c_ind).t(1);
+        T = floor(data.tc(end));
+        n = round(T/dt);
+        t = linspace(0,T,n)';
         data.vc = cdata(c_ind).v;
         data.ic = cdata(c_ind).i;
         data.rc = cdata(c_ind).r;
@@ -51,11 +55,18 @@ ncells = 12;  % Number of cells used: 6S x2
 p.V_oc         = ncells*[-0.6388,-48.7497,0.7153,-0.6260,0.4743,3.6115];
 
 % -- Voltage-Current params to learn (initial conditions)
-p.R_series     = [0,0,0.03];
-p.R_1          = [0,0,0.0005];
-p.C_1          = [0,0,10];
-p.R_2          = [0,0,0.0004];
-p.C_2          = [0,0,1000];
+p.R_series     = [0,0,0.01];
+p.R_1          = [0,0,0.03];
+p.C_1          = [0,0,100];
+p.R_2          = [0,0,0.3];
+p.C_2          = [0,0,500];
+
+R_series0 = 0.015; k_R_series = 1;
+R_10 = 0.005; k_R_1 = 1;
+C_10 = 100; k_C_1 = 1;
+R_20 = 0.0004; k_R_2 = 1;
+C_20 = 1000; k_C_2 = 1;
+
 
 % -- Voltage-Current Characteristics from Chen-Rincon-Mora
 % ncells = 12;
@@ -86,9 +97,9 @@ v.C_2         = g(v.SOC,p.C_2);
 format long g
 dJ = 0;
 J = 0;
-ep = -10*10.^[-1,-2,0,-2,2];
-nk = 2*1e2;
-R_series = linspace(0.01,0.07,nk);
+ep = -10.^[-3,-2,-2,-2,-2];
+nk = 1;
+% R_series = linspace(0.01,0.07,nk);
 tol = 1e-4;
 for k=1:nk
     %     clc
@@ -111,10 +122,10 @@ for k=1:nk
 
     ylen = length(y.R_series);
     datalen = length(data.vc_interp);
-    J(k) = sum((y.V_L(2:end)-data.vc_interp).^2);
+    J(k) = sum((y.V_L(2:end)-data.vc_interp).^2 +(y.i(2:end)-data.ic_interp).^2);
     thet = [p.R_series(3),p.R_1(3),p.C_1(3),p.R_2(3),p.C_2(3)];
-    lam = 1e-4;
-    J(k) = J(k) + lam*sum(thet);
+%     lam = 1e-4;
+%     J(k) = J(k) + lam*sum(thet);
     if k==1
         dJ = ep(1).^2*randn();
     else
@@ -122,11 +133,11 @@ for k=1:nk
     end
 
     if dJ == 0
-        dJ = 0.01.^2*randn();
+        dJ = 0*0.01.^2*randn();
     end
 
         %     param_dir = randi(5);
-        dk = mod(k,5)+1;
+        dk = mod(k,1)+1;
         switch dk
             case 1
                 %randi(3);

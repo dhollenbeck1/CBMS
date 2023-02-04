@@ -29,10 +29,10 @@ end
 save(fn2,'cdata')
 
 %%
-k = 3;
-plot(data.tc,data.vc,'LineWidth',2)
-hold on
-plot(cdata(k).t,cdata(k).v,'r--','LineWidth',2)
-hold off
+% k = 3;
+% plot(data.tc,data.vc,'LineWidth',2)
+% hold on
+% plot(cdata(k).t,cdata(k).v,'r--','LineWidth',2)
+% hold off
   
 % axis([180,300,48,52])
