@@ -1,5 +1,6 @@
 clc
 clear
+clf
 
 % -- Import Data
 fn = 'data/data_test1.mat';
@@ -7,7 +8,7 @@ fn2 = 'data_cut/cdata_test1.mat';
 
 switch 2
     case 1
-        T = 1000;
+        T = 5000;
         dt = 1e-0;
         n = round(T/dt);
         t = linspace(0,T,n)';
@@ -17,7 +18,7 @@ switch 2
         data.rc_interp = interp1(data.tc,data.rc,t);
     case 2
         load(fn2); 
-        c_ind = 1;        
+        c_ind = 6;        
         dt = 1e-0;      
         data.tc = cdata(c_ind).t - cdata(c_ind).t(1);
         T = floor(data.tc(end));
@@ -52,21 +53,79 @@ g       = @(SOC,p)  p(1).*exp(p(2).*SOC) + p(3);
 
 % -- Voltage-Current Characteristics from fitted Manufacturer data
 ncells = 12;  % Number of cells used: 6S x2
-p.V_oc         = ncells*[-0.6388,-48.7497,0.7153,-0.6260,0.4743,3.6115];
-
+k_V_oc = 1.03;
+p.V_oc         = k_V_oc*ncells*[-0.6388,-48.7497,0.7153,-0.6260,0.4743,3.6115];
+f(1,p.V_oc)
 % -- Voltage-Current params to learn (initial conditions)
-p.R_series     = [0,0,0.01];
-p.R_1          = [0,0,0.03];
-p.C_1          = [0,0,100];
-p.R_2          = [0,0,0.3];
-p.C_2          = [0,0,500];
+R_series0 =  0.0176725770193065; k_R_series = 1;
+R_10 = 0.0300931359624154; k_R_1 = 1;
+C_10 = 89; k_C_1 = 1;
+R_20 = 0.019421970865732; k_R_2 = 1;
+C_20 = 3506.11460380014; k_C_2 = 1;
+R_30 = 0.019421970865732; k_R_3 = 1;
+C_30 = 3506.11460380014; k_C_3 = 1;
 
-R_series0 = 0.015; k_R_series = 1;
-R_10 = 0.005; k_R_1 = 1;
-C_10 = 100; k_C_1 = 1;
-R_20 = 0.0004; k_R_2 = 1;
-C_20 = 1000; k_C_2 = 1;
+% -- sequence 1
+% k_C_2 = 1.6065
+% k_R_1 = 0.6;
+% k_R_2 = 0.6842
+% k_R_series = 2.1;
+% k_C_3 = 3.7842
+% k_R_3 = 2.3;
+% k_V_oc = 1.0287
 
+
+% -- sequence 2
+% k_C_2 = 1.572
+% k_R_1 = 1.2535
+% k_R_2 = 0.71904
+% k_R_series = 0.19319
+% k_C_3 = 10.629
+% k_R_3 = 42.835
+% k_V_oc = 1.0263
+
+% -- sequence 3
+% k_C_2 = 1.8128
+% k_R_1 = 1.0467
+% k_R_2 = 0.53614
+% k_R_series = 0.30923
+% k_C_3 = 12.941
+% k_R_3 = 3.0334
+% k_V_oc = 1.0166
+
+% -- sequence 4
+k_C_2 = 1.1658
+k_R_1 = 1.0913
+k_R_2 = 0.81949
+k_R_series = 2.5976e-15
+k_C_3 = 1000
+k_R_3 = 3.4178e-09
+k_V_oc = 1.0073
+% CRM_paramEstimation/C_capacity:CRM_paramEstimation.C_capacity.vc = 0.44127;
+
+% -- sequence 5
+k_C_2 = 2.1337
+k_R_1 = 1.0632
+k_R_2 = 0.51122
+k_R_series = 0.12736
+k_C_3 = 1000
+k_R_3 = 1.5288e-09
+k_V_oc = 0.99947
+% CRM_paramEstimation/C_capacity:CRM_paramEstimation.C_capacity.vc = 0.36943
+
+p.R_series     = [0,0,R_series0*k_R_series];
+p.R_1          = [0,0,R_10*k_R_1];
+p.C_1          = [0,0,C_10*k_C_1];
+p.R_2          = [0,0,R_20*k_R_2];
+p.C_2          = [0,0,C_20*k_C_2];
+
+R_series0*k_R_series
+R_10*k_R_1
+C_10*k_C_1
+R_20*k_R_2
+C_20*k_C_2
+R_30*k_R_3
+C_30*k_C_3
 
 % -- Voltage-Current Characteristics from Chen-Rincon-Mora
 % ncells = 12;
@@ -85,7 +144,20 @@ tempk       = find(temp <= voc_0,1,"last");
 SOC_0       = SOC(tempk);
 
 % -- Initialize Simulation Variables
-v.SOC         = SOC_0;
+switch c_ind
+    case 1
+        v.SOC         = 0.87998;%SOC_0; % sequence 1
+    case 2
+        v.SOC         = 0.735467282528717; %SOC_0;
+    case 3
+        v.SOC         = 0.561090954566274; %SOC_0;
+    case 4
+        v.SOC         = 0.44127; %0.39001671767703;
+    case 5
+        v.SOC         = 0.36943; %0.216492361981287;
+    case 6
+        v.SOC         = 0.1481462082476085;
+end
 v.V_oc        = f(v.SOC,p.V_oc);
 v.R_series    = g(v.SOC,p.R_series);
 v.R_1         = g(v.SOC,p.R_1);
@@ -105,7 +177,8 @@ for k=1:nk
     %     clc
     %     disp(k)
     %     p.R_series(3) = R_series(k);
-    out = sim("chenRinconMoraModel_paramEstimation.slx");
+    %out = sim("chenRinconMoraModel_paramEstimation.slx");
+    out = sim("CRM_paramEstimation.slx");
     %
     % -- Extract data...
     y.t = out.simout.Time;% 0: time
@@ -122,7 +195,7 @@ for k=1:nk
 
     ylen = length(y.R_series);
     datalen = length(data.vc_interp);
-    J(k) = sum((y.V_L(2:end)-data.vc_interp).^2 +(y.i(2:end)-data.ic_interp).^2);
+    J(k) = sum((y.V_L(2:end)-data.vc_interp(1:ylen-1)).^2 +(y.i(2:end)-data.ic_interp(1:ylen-1)).^2);
     thet = [p.R_series(3),p.R_1(3),p.C_1(3),p.R_2(3),p.C_2(3)];
 %     lam = 1e-4;
 %     J(k) = J(k) + lam*sum(thet);
