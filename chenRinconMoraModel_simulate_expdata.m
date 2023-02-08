@@ -3,6 +3,13 @@
 
 addpath data\ data_cut\ data_raw\ auxillary\
 
+% -- Battery Monitor Params
+X_0 = 0.89;
+X_i = 0;
+X_L = 0.04;
+X_NA = 0;
+X_RUL = X_0 - X_i - X_L - X_NA;
+
 % -- Import Data
 fn = 'data_cut\data_20220810.mat';
 load(fn)
@@ -14,6 +21,7 @@ data.ic_interp = interp1(data.te,data.ie,t);
 data.vc_interp = interp1(data.te,data.ve,t);
 data.rc_interp = interp1(data.te,data.re,t);
 data.rc_interp = movmean(data.rc_interp,5);
+data.wp_interp = interp1(data.te,data.wp,t);
 % data.rc_interp = sgolayfilt(data.rc_interp,13,21);
 rclimit = 1;
 data.rc_interp(data.rc_interp<rclimit) = rclimit;
@@ -45,14 +53,14 @@ g       = @(SOC,p)  p(1).*exp(p(2).*SOC) + p(3);
 % gradf_SOC   = @(SOC,p)
 
 % -- Voltage-Current hyperparams
-p.R_series     = [1.63339628126812e-05          8.71313419110223     -0.000181956163055476];
-p.R_1          = [-2.72130383416836e-07          12.4043553051855        0.0337869742167239];
-p.C_1          = [                0                         0                        89];
-p.R_2          = [0.021478839277293          0.19205191547777       -0.0115329708457113];
-p.C_2          = [0                         0          6091.58194788576];
-p.R_3          = 1.5*[6.84750107001574        0.0741110878565304         -6.96796134105061];
-p.C_3          = [ 0*14215582.5672873+1e8        -0.558664045080813        -5e5+0*-8929606.37707713];
-p.K_V_oc         = [0.153418165249012+0.05         0.273499935298638-0.02         0.835830972401159-0.05];
+p.R_series     = [1.63339628126812e-05,8.71313419110223,-0.000181956163055476];
+p.R_1          = [-2.72130383416836e-07,12.4043553051855,0.0337869742167239];
+p.C_1          = [0,0,89];
+p.R_2          = [0.021478839277293,0.19205191547777,-0.0115329708457113];
+p.C_2          = [0,0,6091.58194788576];
+p.R_3          = [6.84750107001574,0.0741110878565304,-6.96796134105061];
+p.C_3          = [14215582.5672873*0+8e5,-0.558664045080813+0.05,-8929606.37707713*0-1e4];
+p.K_V_oc       = [0.153418165249012+0.05,0.273499935298638-0.05,0.835830972401159-0.05];
 
 % -- Voltage-Current Characteristics from fitted Manufacturer data
 ncells = 12;  % Number of cells used: 6S x2
@@ -75,7 +83,7 @@ tempk       = find(temp <= voc_0,1,"last");
 SOC_0       = SOC(tempk);
 
 % -- Initialize Simulation Variables
-v.SOC         = 0.86;%SOC_0;
+v.SOC         = X_0;%SOC_0;
 v.V_oc        = f(v.SOC,p.V_oc);
 v.R_series    = g(v.SOC,p.R_series);
 v.R_1         = g(v.SOC,p.R_1);
@@ -110,6 +118,8 @@ for k=1:nk
     y.i = out.simout.Data(:,8);  % 8: i_bat
     y.V_L = out.simout.Data(:,9);% 9: V_L
     y.R_L = simin.signals.values;%10: R_L
+    y.Land = out.simout.Data(:,12);
+    y.t_RUL = out.simout.Data(:,13);
 
     ylen = length(y.R_series);
     datalen = length(data.vc_interp);
@@ -174,24 +184,36 @@ for k=1:nk
         % disp(param_dir)
 
 %     end
-    % Plots
+    %% Plots
     % -- Plot data...
-    lw = 2;
-    plot(data.tc,data.vc,'k','LineWidth',lw)
+    figure(1)
+    clf
+    lw = 1.5;
+    plot(simin.time,data.vc_interp,'k','LineWidth',lw)
     hold on;
     plot(y.t(2:end),y.V_L(2:end),'r--','LineWidth',lw)
+    plot(simin.time, data.wp_interp,'m','LineWidth',lw)
+    plot(y.t(2:end),(-y.Land(2:end)+1)/2*50,'y','LineWidth',lw)
     yyaxis left
     ylim([40,52])
     hold off;
     yyaxis right
-    plot(data.tc,data.ic,'b','LineWidth',lw)
+    plot(simin.time,data.ic_interp,'b','LineWidth',lw)
     hold on
     plot(y.t(2:end),y.i(2:end),'g--','LineWidth',lw);
     hold off
 
-    xlim([y.t(1),y.t(end)])
+    ax = gca;
+    ax.YAxis(2).Color = 'k';
 
-    legend('V_L experiment','V_L simulated','i_L experiment','i_L simulated')
+    xlim([simin.time(1),simin.time(end)])
+
+    legend('V_L experiment','V_L simulated',...
+        'Landing Initialized','Early Warning Estimate',...
+        'i_L experiment','i_L simulated')
+
+    figure(2)
+    
     shg
 end
 % yyaxis right
