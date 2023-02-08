@@ -6,8 +6,8 @@ addpath data\ data_cut\ data_raw\ auxillary\
 % -- Battery Monitor Params
 X_0 = 0.89;
 X_i = 0;
-X_L = 0.04;
-X_NA = 0;
+X_L = 0.013168 + 0.01646; % descend + vtol land
+X_NA = 0.01;
 X_RUL = X_0 - X_i - X_L - X_NA;
 
 % -- Import Data
@@ -192,8 +192,8 @@ for k=1:nk
     plot(simin.time,data.vc_interp,'k','LineWidth',lw)
     hold on;
     plot(y.t(2:end),y.V_L(2:end),'r--','LineWidth',lw)
-    plot(simin.time, data.wp_interp,'m','LineWidth',lw)
-    plot(y.t(2:end),(-y.Land(2:end)+1)/2*50,'y','LineWidth',lw)
+%     plot(simin.time, data.wp_interp,'m','LineWidth',lw)
+%     plot(y.t(2:end),(-y.Land(2:end)+1)/2*50,'y','LineWidth',lw)
     yyaxis left
     ylim([40,52])
     hold off;
@@ -208,12 +208,30 @@ for k=1:nk
 
     xlim([simin.time(1),simin.time(end)])
 
-    legend('V_L experiment','V_L simulated',...
-        'Landing Initialized','Early Warning Estimate',...
-        'i_L experiment','i_L simulated')
+    legend('V_L experiment','V_L simulated','i_L experiment','i_L simulated')
+%         'Landing Initialized','Early Warning Estimate',...
+%         'i_L experiment','i_L simulated')
 
-    figure(2)
+    figure(2)    
+    yyaxis left
+    k = (y.t_RUL > 0); plot(y.t(k),y.t_RUL(k)*100,'k-','LineWidth',lw)
+    hold on
+    k = (y.t_RUL <= 0); plot(y.t(k),y.t_RUL(k)*100,'r-','LineWidth',lw)
+    hold off
+    ylim([-100,1000]) 
+    ylabel('RUL, s')
+    yyaxis right
+    plot(simin.time, data.wp_interp/50,'b-','LineWidth',lw)
+    hold on
+    plot(y.t(2:end),(-y.Land(2:end)+1)/2,'g--','LineWidth',lw)
+    hold off
+    ylim([0,1])
+    ylabel('Land')
+    xlabel('seconds, s')
+    title('Remaining Useful Life and Landing Time')
     
+ xlim([simin.time(end)-1200,simin.time(end)])
+    ax = gca; ax.YAxis(2).Color = 'k';                  
     shg
 end
 % yyaxis right
