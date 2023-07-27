@@ -6,9 +6,22 @@ clc
 temp = readtable('capturebatjulypulse.txt');
 data = table2array(temp(:,1:67));
 data = data(1:end-1,:);
+clear temp
 
 T = data(:,4:67);
 T = mean(T')';
+
+time = datevec(data(:,1));
+temp = time(:,4)*3600 + time(:,5)*60 + time(:,6);
+time = temp - temp(1);
+voltage = data(:,2);
+current = data(:,3);
+k = diff(time)<=0;
+time(k) = [];
+voltage(k) = [];
+current(k) = [];
+save('test2_pulseDischarge_data','time','voltage','current')
+clear time voltage current
 
 % temp2 = table2array(temp(:,1:2));
 % temp3_ = table2cell(temp(:,3));
