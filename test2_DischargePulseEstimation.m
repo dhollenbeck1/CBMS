@@ -1,5 +1,6 @@
 %
-clear
+clear all
+clc
 % Copyright 2016-2018 The MathWorks, Inc.
 %
 % Using MathWorks tools, estimation techniques, and measured lithium-ion 
@@ -11,20 +12,104 @@ clear
 % characterize the battery transients. Typically, the number of RC pairs 
 % ranges from 1 through 5.
 
-%% Step 1: Load and Preprocess Data
+% Step 1: Load and Preprocess Data
+close all
 %
 % Create a Pulse Sequence object, which represents a pulse sequence
 % experiment
 psObj = Battery.PulseSequence;
-disp(psObj)
+% disp(psObj)
 
 % Load in data
 % Specify the file name
 %FileName = 'Synthetic_LiPo_PulseDischarge.mat';
+%fn = 'capture_20230815_1.txt';
+fn = '20230919_batteryTest.txt';
+temp = importdata(fn,',');
+t = temp(:,1); voltage = temp(:,2); current = temp(:,3); 
+t = datevec(t); time = t(:,4) + t(:,5)/60 + t(:,6)/3600;
+time = (time - time(1))*3600;
+
+k = [1;diff(time)];
+kk = (k==0);
+idx = 1:length(time);
+
+plot(idx,time,'k',idx(kk),time(kk),'r.')
+% time(kk)=[];
+% voltage(kk)=[];
+% current(kk)=[];
+% clear k kk
+
+tc_idx = 95741:95748;
+M = (time(tc_idx(end)+1)-time(tc_idx(1)-1))/(length(tc_idx)+2);
+temp2 = M*ones(length(tc_idx),1);
+temp2 = cumsum(temp2);
+temp2 = temp2 + time(tc_idx(1)-1); 
+time(tc_idx) = temp2;
+
+% hold on; plot(tc_idx,time(tc_idx),'b--'); hold off
+clear t temp
+
+%len = length(voltage);
+%vn = 0; cn = 0;
+% voltage_new = voltage + vn^2*randn(len,1);
+% current_new = current + cn^2*randn(len,1);
+%voltage_new = voltage + 0.05*sign(randn(len,1)) + vn^2*randn(len,1);
+%current_new = current + 0.05*sign(randn(len,1))+ cn^2*randn(len,1);
+
+% -- Smooth data
+if 1
+switch 4
+    case 1
+        ord = 1; wlen = 11;
+        voltage_new = sgolayfilt(voltage,ord,wlen);
+        current_new = sgolayfilt(current,ord,wlen);
+        ord = 1; wlen = 9;
+        voltage_new = sgolayfilt(voltage_new,ord,wlen);
+        current_new = sgolayfilt(current_new,ord,wlen);
+        ord = 1; wlen = 7;
+        voltage_new = sgolayfilt(voltage_new,ord,wlen);
+        current_new = sgolayfilt(current_new,ord,wlen);
+    case 2
+        wlen = 20;
+        voltage_new = movmean(voltage,wlen);
+        current_new = movmean(current,wlen);
+%         wlen = 8;
+%         voltage_new = movmean(voltage_new,wlen);
+%         current_new = movmean(current_new,wlen);
+%         wlen = 12;
+%         voltage_new = movmean(voltage_new,wlen);
+%         current_new = movmean(current_new,wlen);
+    case 3
+        ord = 13; wlen = 101;
+        voltage_new = sgolayfilt(voltage,ord,wlen);
+        current_new = sgolayfilt(current,ord,wlen);
+    case 4
+        wlen = 11; smoothtype = 'movmean';
+        voltage_new = smoothdata(voltage,smoothtype,wlen);
+        current_new = smoothdata(current,smoothtype,wlen);
+    otherwise
+        voltage_new = voltage;
+        current_new = current;
+end
+figure(1)
+plot(time,voltage,'k',time,voltage_new,'r--',time,current,'k',time,current_new,'b--')
+voltage = voltage_new;
+current = current_new;
+end
+
+% r = 3;
+% time = decimate(time,r,"fir");
+% voltage = decimate(voltage,r,'fir');
+% current = decimate(current,r,'fir');
+% voltage(time<0) = [];
+% current(time<0) = [];
+% time(time<0) = [];
 
 % Read the raw data
 %[time,voltage,current] = Battery.loadDataFromMatFile(FileName);
-load test2_pulseDischarge_data.mat
+% load test2_pulseDischarge_data.mat
+% kin = 73865; time = time(1:kin); voltage = voltage(1:kin); current = current(1:kin);
 
 % Add the data to the PulseSequence
 psObj.addData(time,voltage,current);
@@ -38,11 +123,22 @@ psObj.plot();
 % parameter object that contains look-up tables of the correct size, given
 % the number of pulses
 psObj.createPulses(...
-    'CurrentOnThreshold',10,... %minimum current magnitude to identify pulse events
+    'CurrentOnThreshold',12,... %minimum current magnitude to identify pulse events
     'NumRCBranches',3,... %how many RC pairs in the model
     'RCBranchesUse2TimeConstants',false,... %do RC pairs have different time constant for discharge and rest?
     'PreBufferSamples',10,... %how many samples to include before the current pulse starts
     'PostBufferSamples',15); %how many samples to include after the next pulse starts
+
+% Correct for pulses that are not normal 
+% psObj.NumPulses = 10;
+% psObj.idxEdge = psObj.idxEdge(1:40,:);
+% psObj.idxLoad = psObj.idxLoad(1:10,:);
+% psObj.idxRelax = psObj.idxRelax(1:10,:);
+% psObj.Pulse = psObj.Pulse(1:10);
+if 0
+    idxRemove = [3,4,5,6,7,9,10,11,13,15,16,17,21];
+    psObj.removePulses(idxRemove)
+end
 
 % Specify the Simulink model that matches the number of RC branches and
 % time constants:
@@ -68,6 +164,7 @@ psObj.plotIdentifiedPulses();
 % Pick a pulse near the beginning, middle, and end. Note: you could run all
 % of them if you want.
 PulsesToTest = [1 floor(psObj.NumPulses/2), psObj.NumPulses-1];
+% PulsesToTest = [1 3 6 9];
 
 % Perform the comparison
 psObj.Pulse(PulsesToTest).compareRelaxationTau();
@@ -79,7 +176,7 @@ psObj.Pulse(PulsesToTest).compareRelaxationTau();
 Params = psObj.Parameters;
 
 % Set Em constraints and initial guesses (or don't and try the defaults)
-Params.Em(:) = 4.2*12;
+Params.Em(:) = 4.4*12;
 Params.EmMin(:) = 3.4*12;
 Params.EmMax(:) = 4.4*12;
 
@@ -94,6 +191,7 @@ Params.R0Max(:) = 1;
 Params.Tx(1,:,:) = 5;
 Params.Tx(2,:,:) = 50;
 Params.Tx(3,:,:) = 200;
+% Params.Tx(4,:,:) = 500;
 
 Params.TxMin(1,:,:) = 1;
 Params.TxMax(1,:,:) = 50;
@@ -104,6 +202,9 @@ Params.TxMax(2,:,:) = 1000;
 Params.TxMin(3,:,:) = 100;
 Params.TxMax(3,:,:) = 3500; %don't set this bigger than the relaxation time available
 
+
+% Params.TxMin(4,:,:) = 200;
+% Params.TxMax(4,:,:) = 10000;
 % Set Rx constraints and initial guesses (or don't and try the defaults)
 Params.Rx(:) = 0.01;
 Params.RxMin(:) = 1e-5;
@@ -187,13 +288,15 @@ psObj.estimateParameters(...
 psObj.plotLatestParameters(); %See what the parameters look like so far
 psObj.plotSimulationResults(); %See what the result looks like so far
 
-
 %% Step 4: Set Equivalent Circuit Battery Block Parameters
 %
 % The experiment was run at ambient temperature (303°K) only.  Repeat 
 % the tables across the operating temperature range.  If the discharge 
 % experiment was run at 2 different constant temperatures, then include 
 % these in the tables below. 
+
+load 20230919_data.mat
+
 EmPrime = repmat(Em,2,1)';
 R0Prime = repmat(R0,2,1)';
 SOC_LUTPrime = SOC_LUT;
@@ -206,5 +309,8 @@ R2Prime = repmat(Rx(2,:),2,1)';
 C2Prime = repmat(Tx(2,:)./Rx(2,:),2,1)';
 R3Prime = repmat(Rx(3,:),2,1)';
 C3Prime = repmat(Tx(3,:)./Rx(3,:),2,1)';
+% R4Prime = repmat(Rx(4,:),2,1)';
+% C4Prime = repmat(Tx(4,:)./Rx(4,:),2,1)';
 
 open_system('BatteryEstim3RC_PTBS_EQ');
+
