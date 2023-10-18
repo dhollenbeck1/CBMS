@@ -45,7 +45,7 @@ mp.fn = [{'2022-07-29 10-38-55_f1.mat'},
     {'2022-08-10 09-40-57_f1.mat'}
     {'2022-09-26 11-49-08_f1.mat'}
     {'2022-10-21 13-31-20_f1.mat'}];
-mp.j = 4;
+mp.j = 1;
 load(char(mp.fn(mp.j)));
 mp.i = i;
 mp.v = v;
@@ -65,21 +65,46 @@ mp.C3prime = mp.f(mp.SOC_LUT,mp.thet(7,:));
 mp.J = @(x,y) sum((x-y).^2,'omitnan');
 mp.simulinkModel = "BatteryEstim3RC_PTBS_EQ_v1.slx";
 mp.PLOT = 1;
-save 20230919_data_modelparams mp
+% ISE = zeros(7,2); % (1) parameterized (2) lookup table
+% xhat = zeros(7,2);
+% save 20230919_data_performance ISE xhat
+save 20230919_data_modelparams mp 
 
 clear
 close all
 
 load 20230919_data_modelparams
+load 20230919_data_performance
 
 global mpg
 mpg = mp;
+   
+% for j = 1:7
+
+%     mpg.j = j;
+%     load(char(mpg.fn(j)));
+%     mpg.i = i;
+%     mpg.v = v;
+%     mpg.t = t;
+
+    % -- clean up imported data
+%     mpg.i(isnan(mpg.i))=0;
+%     mpg.t = mpg.t - mpg.t(1);
     
-xhat = fminsearchbnd(...
-    @(x) behaviorMatchingCostFunction(x),...
-    [21.1,0.7],...
-    [18,0.5],...
-    [25,1]);
+%     disp(['j = ',num2str(j)])
+    xhat(mp.j,:) = fminsearchbnd(...
+        @(x) behaviorMatchingCostFunction(x),...
+        [19.1,0.6],...
+        [18,0.5],...
+        [25,1]);
+    %mpg.xhat(j,:) = xhat
+    ISE(mp.j,1) = sum((mpg.v1c-mpg.v).^2.*[0;diff(mpg.t)],'omitnan');
+    ISE(mp.j,2) = sum((mpg.v2c-mpg.v).^2.*[0;diff(mpg.t)],'omitnan');
+    saveas(gcf,['image_',num2str(mp.j)],'png')
+    saveas(gcf,['image_',num2str(mp.j)],'fig')
+    save 20230919_data_performance ISE xhat
+%     pause
+% end
 %     [24.1],...
 %     [16],...
 %     [25]);

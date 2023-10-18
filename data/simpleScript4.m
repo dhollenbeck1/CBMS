@@ -56,19 +56,20 @@ X_mean = mean(X);
 % -- analze results
 figure(4)
 clf
-scatter(dt_l,Xl,lw/4,'go'); hold on
-scatter(dt_la(dt_la>0),Xla(dt_la>0),lw/4,'ro')
-plot(mean(dt_l),mean(Xl),'g*')
-plot(mean(dt_la(dt_la>0)),mean(Xla(dt_la>0)),'r*')
-scatter(dt,X,lw,'b.')
-plot(mean(dt),mean(X),'b*')
+plot(dt,X,'b^','LineWidth',1.5); hold on
+plot(mean(dt),mean(X),'bd','MarkerFaceColor','b')
+plot(dt_l,Xl,'go','LineWidth',1.5)
+plot(mean(dt_l),mean(Xl),'gd','MarkerFaceColor','g')
+plot(dt_la(dt_la>=0),Xla(dt_la>=0),'rs','LineWidth',1.5)
+plot(mean(dt_la(dt_la>0)),mean(Xla(dt_la>0)),'rd','MarkerFaceColor','r')
 hold off
+xlim([0,180])
 grid on
 title('SOC cost vs execution time')
 xlabel('time, s'); ylabel('SOC cost')
-legend('Landing Cost', 'Approach Cost',...
-    'Avg. Landing','Avg. Approach',...
-    'Combined cost','Avg. Combined',...
+legend('Combined', 'Avg. Combined',...
+    'Landing','Avg. Landing',...
+    'Approach','Avg. Approach',...
     'Location','southeast')
 set(gca,'FontSize',14)
 
